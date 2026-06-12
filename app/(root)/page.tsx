@@ -35,12 +35,10 @@ const Home = async ({ searchParams }: SearchParamProps) => {
       </section>
 
       <section className="sm:mt-12">
-        <Collection
-          hasSearch={true}
-          images={images?.data}
-          totalPages={images?.totalPage}
-          page={page}
-        />
+        <h2 className="h2-bold text-dark-600">Recent Edits</h2>
+        <p className="p-16-regular mt-4">
+          Homepage image collection is temporarily disabled while database connection is being checked.
+        </p>
       </section>
     </>
   );
