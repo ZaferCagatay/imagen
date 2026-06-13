@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { clerkClient } from '@clerk/nextjs';
 
 import User from '../database/models/user.model';
 import { connectToDatabase } from '../database/mongoose';
@@ -24,9 +25,35 @@ export async function getUserById(userId: string) {
   try {
     await connectToDatabase();
 
-    const user = await User.findOne({ clerkId: userId });
+    let user = await User.findOne({ clerkId: userId });
 
-    if (!user) throw new Error('User not found');
+    if (!user) {
+      const clerkUser = await clerkClient.users.getUser(userId);
+
+      const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+
+      if (!email) {
+        throw new Error('Clerk user has no email address');
+      }
+
+      const username =
+        clerkUser.username || email.split('@')[0] || `user_${clerkUser.id}`;
+
+      user = await User.create({
+        clerkId: clerkUser.id,
+        email,
+        username,
+        firstName: clerkUser.firstName || '',
+        lastName: clerkUser.lastName || '',
+        photo: clerkUser.imageUrl || '',
+      });
+
+      await clerkClient.users.updateUserMetadata(clerkUser.id, {
+        publicMetadata: {
+          userId: user._id,
+        },
+      });
+    }
 
     return JSON.parse(JSON.stringify(user));
   } catch (error) {
@@ -81,7 +108,7 @@ export async function updateCredits(userId: string, creditFee: number) {
     const updatedUserCredits = await User.findOneAndUpdate(
       { _id: userId },
       { $inc: { creditBalance: creditFee } },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedUserCredits) throw new Error('User credits update failed');

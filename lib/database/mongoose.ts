@@ -18,11 +18,22 @@ export const connectToDatabase = async () => {
 
   if (!MONGODB_URL) throw new Error('Missing MONGODB_URL');
 
+  console.time('mongodb connect');
+
   cached.promise =
     cached.promise ||
-    mongoose.connect(MONGODB_URL, { dbName: 'imagen', bufferCommands: false });
+    mongoose.connect(MONGODB_URL, {
+      dbName: 'imagen',
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 5000,
+      maxPoolSize: 5,
+    });
 
   cached.conn = await cached.promise;
+
+  console.timeEnd('mongodb connect');
 
   return cached.conn;
 };
